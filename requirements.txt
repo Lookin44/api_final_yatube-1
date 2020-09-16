@@ -4,3 +4,8 @@ pytest
 pytest-django
 djangorestframework
 djangorestframework-simplejwt
+pillow
+sorl-thumbnail
+markdown
+django-cors-headers
+django-filters
