@@ -1,5 +1,5 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import permissions, filters, mixins, viewsets
+from rest_framework import permissions, filters, viewsets, generics
 from django_filters.rest_framework import DjangoFilterBackend
 
 from . import serializers
@@ -7,13 +7,7 @@ from .models import Post, Comment, Follow, Group
 from .permissions import IsAuthorOrReadOnlyPermission
 
 
-class PostViewSet(viewsets.GenericViewSet,
-                  mixins.ListModelMixin,
-                  mixins.CreateModelMixin,
-                  mixins.RetrieveModelMixin,
-                  mixins.UpdateModelMixin,
-                  mixins.DestroyModelMixin,
-                  ):
+class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = serializers.PostSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,
@@ -25,36 +19,24 @@ class PostViewSet(viewsets.GenericViewSet,
         serializer.save(author=self.request.user)
 
 
-class CommentViewSet(viewsets.GenericViewSet,
-                     mixins.ListModelMixin,
-                     mixins.CreateModelMixin,
-                     mixins.RetrieveModelMixin,
-                     mixins.UpdateModelMixin,
-                     mixins.DestroyModelMixin):
-
+class CommentViewSet(viewsets.ModelViewSet):
     serializer_class = serializers.CommentSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,
                           IsAuthorOrReadOnlyPermission)
 
     def get_queryset(self):
-        queryset = Comment.objects.filter(post=self.kwargs['post_id'])
+        queryset = Comment.objects.filter(
+            post=get_object_or_404(Post, pk=self.kwargs.get('post_id')))
+        print(queryset)
         return queryset
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user,
                         post=get_object_or_404(Post,
-                                               pk=self.kwargs['post_id']))
-
-    def get_object(self):
-        obj = get_object_or_404(self.get_queryset(), pk=self.kwargs['pk'])
-        self.check_object_permissions(self.request, obj)
-        return obj
+                                               pk=self.kwargs.get('post_id')))
 
 
-class FollowViewSet(viewsets.GenericViewSet,
-                    mixins.ListModelMixin,
-                    mixins.CreateModelMixin,
-                    ):
+class FollowViewSet(viewsets.ViewSetMixin, generics.ListCreateAPIView):
     queryset = Follow.objects.all()
     serializer_class = serializers.FollowSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly,
@@ -66,10 +48,7 @@ class FollowViewSet(viewsets.GenericViewSet,
         serializer.save(user=self.request.user)
 
 
-class GroupViewSet(viewsets.GenericViewSet,
-                   mixins.ListModelMixin,
-                   mixins.CreateModelMixin,
-                   ):
+class GroupViewSet(viewsets.ViewSetMixin, generics.ListCreateAPIView):
     queryset = Group.objects.all()
     serializer_class = serializers.GroupSerializer
     permission_classes = (permissions.IsAuthenticatedOrReadOnly, )
